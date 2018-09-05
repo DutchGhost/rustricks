@@ -1,7 +1,2 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+/// Forces a move.
+pub fn mv<T>(x: T) -> T { x }
