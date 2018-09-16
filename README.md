@@ -124,6 +124,7 @@ To get around this, there are a few techniques:
 
   - Use [std::cell::Cell](https://doc.rust-lang.org/std/cell/struct.Cell.html).
   - Use [std::cell::RefCell](https://doc.rust-lang.org/std/cell/struct.RefCell.html).
+  - Rewrite and leverage NLL
 
 #### Technique 1: std::cell::Cell
 
@@ -187,3 +188,32 @@ The advantages of this technique is that the inner value is not required to impl
 
 ##### Disadvantages
 The big disadvantage of RefCell is that obtaining references / mutable references is dynamically checked, and therefore has some runtime overhead.
+
+#### Technique 3: Rewrite and leverage NLL
+
+```Rust
+#![feature(nll)]
+
+#[derive(Debug)]
+struct NonCopyBool(bool);
+
+fn main() {
+    let mut flag = NonCopyBool(false);
+
+    let mut c1 = || flag = NonCopyBool(true);
+    c1();
+
+    let c2 = || println!("{:?}", flag);
+    c2();
+}
+```
+[playground](https://play.rust-lang.org/?gist=d4bdc496c789939d41a6ad9cdbb33b5a&version=nightly&mode=debug&edition=2015)
+
+##### How does it work?
+In this case, at no point there are both a mutable reference and a reference to the flag, and therfore there is no problem in the first place.
+
+##### Advantages
+The advantage of this technique is that is does not require any runtime checks, and does not require any implementation of traits.
+
+##### Disadvantages
+This technique can not always be used, and is not verry flexible.
