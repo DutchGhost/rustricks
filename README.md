@@ -17,6 +17,7 @@ fn main() {
 }
 ```
 
+#### Why doesn't this work?
 The borrowchecker complains that `view` is borrowed while assigning to `view`, which violates the borrowing rules.
 
 To get around this, there are 3 options:
@@ -24,7 +25,7 @@ To get around this, there are 3 options:
   - Use a function that moves the borrow.
   - Use Non Lexical Lifetimes (NLL)
 
-##### Technique 1: Use braces
+#### Technique 1: Use braces
 
 ```Rust
 fn main() {
@@ -40,7 +41,7 @@ fn main() {
 
 In this case, `view` is first moved into the braces, then indexed, than converted into a mutable slice, and thàt is reassigned to `view`.
 
-##### Technique 2: Moving the borrow
+#### Technique 2: Moving the borrow
 
 ```Rust
 fn mv<T>(x: T) -> T { x }
@@ -58,7 +59,7 @@ fn main() {
 
 In this case, `view` is moved into the `mv` function, then indexed, than converted into a mutable slice, and then `view` is reassigned.
 
-##### Technique 3: Use NLL
+#### Technique 3: Use NLL
 
 ```Rust
 #![feature(nll)]
@@ -109,15 +110,16 @@ rror[E0502]: cannot borrow `flag` as immutable because it is also borrowed as mu
 12 | }
    | - mutable borrow ends here
 ```
+
+#### Why doesn't this work?
 The flag is borrowed mutably in the first closure, but also borrowed by reference in the second closure.
 This means there are a mutable, and a non-mutable reference to the same data, which violates the rules.
 
 To get around this, there are a few techniques:
-    - Use std::cell::Cell (https://doc.rust-lang.org/std/cell/struct.Cell.html)
-    - Use std::cell::RefCell (https://doc.rust-lang.org/std/cell/struct.RefCell.html)
+    - Use [std::cell::Cell](https://doc.rust-lang.org/std/cell/struct.Cell.html)
+    - Use [std::cell::RefCell](https://doc.rust-lang.org/std/cell/struct.RefCell.html)
 
-
-##### Technique 1: std::cell::Cell
+#### Technique 1: std::cell::Cell
 
 ```Rust
 use std::cell::Cell;
@@ -136,15 +138,19 @@ fn main() {
 }
 ```
 
-This technique works, because the cell's `set` function called in in the first closure, only takes the cell by reference.
-In the second closure, the `take` function is called on the cell. `take` also takes the cell by reference, but requiress the inner value to implement std::default::Default.
+##### How does it work?
+This technique works, because the [set](https://doc.rust-lang.org/std/cell/struct.Cell.html#method.set) method called in in the first closure, only takes the cell by reference.
+In the second closure, the [take](https://doc.rust-lang.org/std/cell/struct.Cell.html#method.take) method is called on the cell. [take](https://doc.rust-lang.org/std/cell/struct.Cell.html#method.take) also takes the cell by reference, but requiress the inner value to implement [Default](https://doc.rust-lang.org/std/default/trait.Default.html). `Take` replaces the current value with the default value of the type it's holding, and returns the replaced value.
 
 Over all, the flag is never mutably borrowed here, so it compiles.
 
-Advantages of this technique is that is does not require the inner value to implement Copy, and does not have any runtime checks.
-The disadvantage of this technique is that the inner value is required to implement Default.
+##### Advantages
+Advantages of this technique is that the inner value of the cell is not required to implement [Copy](https://doc.rust-lang.org/std/marker/trait.Copy.html), and does not have any runtime checks.
 
-##### Technique 2: std::cell::RefCell
+##### Disadvantages
+The disadvantage of this technique is that the inner value is required to implement [Default](https://doc.rust-lang.org/std/default/trait.Default.html).
+
+#### Technique 2: std::cell::RefCell
 
 ```Rust
 use std::cell::RefCell;
@@ -163,7 +169,13 @@ fn main() {
 }
 ```
 
-This technique is also valid, because RefCell`s `borrow_mut` function calld in the first closure, takes the cell by reference. It retruns a `RefMut` struct, which implements Deref and DerefMut.
-The second closures calls `borrow`, which returns a `Ref` struct. `Ref` implements Deref, Debug, Display.
+##### How does it work?
 
-The advantages of this technique is that the inner value is not required to implement Copy or Default. However, the disadvantage is that RefCell is dynamically checked, and has some runtime overhead.
+This technique is also valid, because RefCell's [borrow_mut](https://doc.rust-lang.org/std/cell/struct.RefCell.html#method.borrow_mut) method called in the first closure, takes the cell by reference. It retruns a [RefMut](https://doc.rust-lang.org/std/cell/struct.RefMut.html) struct, which implements [Deref](https://doc.rust-lang.org/std/ops/trait.Deref.html) and [DerefMut](https://doc.rust-lang.org/std/ops/trait.DerefMut.html).
+The second closures calls [borrow](https://doc.rust-lang.org/std/cell/struct.RefCell.html#method.borrow), which returns a [Ref](https://doc.rust-lang.org/std/cell/struct.Ref.html) struct.
+
+##### Advantages
+The advantages of this technique is that the inner value is not required to implement [Copy](https://doc.rust-lang.org/std/marker/trait.Copy.html) or [Default](https://doc.rust-lang.org/std/default/trait.Default.html). 
+
+##### Disadvantages
+The big disadvantage of RefCell is that obtaining references / mutable references is dynamically checked, and therefore has some runtime overhead.
