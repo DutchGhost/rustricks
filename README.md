@@ -16,6 +16,7 @@ fn main() {
     println!("{:?}", view);
 }
 ```
+[playground](https://play.rust-lang.org/?gist=9cf363fb0dc40511f5946d0670d48334&version=stable&mode=debug&edition=2015)
 
 #### Why doesn't this work?
 The borrowchecker complains that `view` is borrowed while assigning to `view`, which violates the borrowing rules.
@@ -38,6 +39,7 @@ fn main() {
     println!("{:?}", view);
 }
 ```
+[playground](https://play.rust-lang.org/?gist=a55056182ceafec5a7dc72cb5d16ff49&version=stable&mode=debug&edition=2015)
 
 In this case, `view` is first moved into the braces, then indexed, than converted into a mutable slice, and thàt is reassigned to `view`.
 
@@ -56,6 +58,7 @@ fn main() {
     println!("{:?}", view);
 }
 ```
+[playground](https://play.rust-lang.org/?gist=31c352ec759529cbf649319552ee1208&version=stable&mode=debug&edition=2015)
 
 In this case, `view` is moved into the `mv` function, then indexed, than converted into a mutable slice, and then `view` is reassigned.
 
@@ -74,13 +77,14 @@ fn main() {
     println!("{:?}", view);
 }
 ```
+[playground](https://play.rust-lang.org/?gist=b890fefba2dc07ec5b12f112cc53cf29&version=nightly&mode=debug&edition=2015)
 
 ### Sharing a value with multiple closures
 
 Whenever you create 2 closures that both capture the same variable, you'll get a compiler error:
 
 ```Rust
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct NonCopyBool(bool);
 
 fn main() {
@@ -110,14 +114,15 @@ rror[E0502]: cannot borrow `flag` as immutable because it is also borrowed as mu
 12 | }
    | - mutable borrow ends here
 ```
+[playground](https://play.rust-lang.org/?gist=787545229aa111a8e86f9692fb757928&version=stable&mode=debug&edition=2015)
 
 #### Why doesn't this work?
 The flag is borrowed mutably in the first closure, but also borrowed by reference in the second closure.
 This means there are a mutable, and a non-mutable reference to the same data, which violates the rules.
 
 To get around this, there are a few techniques:
-    - Use [std::cell::Cell](https://doc.rust-lang.org/std/cell/struct.Cell.html)
-    - Use [std::cell::RefCell](https://doc.rust-lang.org/std/cell/struct.RefCell.html)
+    - Use [std::cell::Cell](https://doc.rust-lang.org/std/cell/struct.Cell.html).
+    - Use [std::cell::RefCell](https://doc.rust-lang.org/std/cell/struct.RefCell.html).
 
 #### Technique 1: std::cell::Cell
 
@@ -137,6 +142,7 @@ fn main() {
     c2();
 }
 ```
+[playground](https://play.rust-lang.org/?gist=4f8610d164e2dacfdb1588c598b7cf8c&version=stable&mode=debug&edition=2015)
 
 ##### How does it work?
 This technique works, because the [set](https://doc.rust-lang.org/std/cell/struct.Cell.html#method.set) method called in in the first closure, only takes the cell by reference.
@@ -155,7 +161,7 @@ The disadvantage of this technique is that the inner value is required to implem
 ```Rust
 use std::cell::RefCell;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct NonCopyBool(bool);
 
 fn main() {
@@ -168,6 +174,7 @@ fn main() {
     c2();
 }
 ```
+[playground](https://play.rust-lang.org/?gist=fcaec5b52590771cc6cd295ab7db40cd&version=stable&mode=debug&edition=2015)
 
 ##### How does it work?
 
