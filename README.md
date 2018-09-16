@@ -73,3 +73,97 @@ fn main() {
     println!("{:?}", view);
 }
 ```
+
+### Sharing a value with multiple closures
+
+Whenever you create 2 closures that both capture the same variable, you'll get a compiler error:
+
+```Rust
+#[derive(Debug, Default)]
+struct NonCopyBool(bool);
+
+fn main() {
+    let mut flag = NonCopyBool(false);
+    
+    let mut c1 = || flag = NonCopyBool(true);
+    let c2 = || println!("{:?}", flag);
+
+    c1();
+    c2();
+}
+```
+
+```
+rror[E0502]: cannot borrow `flag` as immutable because it is also borrowed as mutable
+  --> src/main.rs:8:14
+   |
+7  |     let mut c1 = || flag = NonCopyBool(true);
+   |                  -- ---- previous borrow occurs due to use of `flag` in closure
+   |                  |
+   |                  mutable borrow occurs here
+8  |     let c2 = || println!("{:?}", flag);
+   |              ^^                  ---- borrow occurs due to use of `flag` in closure
+   |              |
+   |              immutable borrow occurs here
+...
+12 | }
+   | - mutable borrow ends here
+```
+The flag is borrowed mutably in the first closure, but also borrowed by reference in the second closure.
+This means there are a mutable, and a non-mutable reference to the same data, which violates the rules.
+
+To get around this, there are a few techniques:
+    - Use std::cell::Cell (https://doc.rust-lang.org/std/cell/struct.Cell.html)
+    - Use std::cell::RefCell (https://doc.rust-lang.org/std/cell/struct.RefCell.html)
+
+
+##### Technique 1: std::cell::Cell
+
+```Rust
+use std::cell::Cell;
+
+#[derive(Debug, Default)]
+struct NonCopyBool(bool);
+
+fn main() {
+    let flag = Cell::new(NonCopyBool(false));
+
+    let c1 = || flag.set(NonCopyBool(true));
+    let c2 = || println!("{:?}", flag.take());
+
+    c1();
+    c2();
+}
+```
+
+This technique works, because the cell's `set` function called in in the first closure, only takes the cell by reference.
+In the second closure, the `take` function is called on the cell. `take` also takes the cell by reference, but requiress the inner value to implement std::default::Default.
+
+Over all, the flag is never mutably borrowed here, so it compiles.
+
+Advantages of this technique is that is does not require the inner value to implement Copy, and does not have any runtime checks.
+The disadvantage of this technique is that the inner value is required to implement Default.
+
+##### Technique 2: std::cell::RefCell
+
+```Rust
+use std::cell::RefCell;
+
+#[derive(Debug, Default)]
+struct NonCopyBool(bool);
+
+fn main() {
+    let flag = RefCell::new(NonCopyBool(false));
+
+    let c1 = || *flag.borrow_mut() = NonCopyBool(true);
+    let c2 = || println!("{:?}", flag.borrow());
+
+    c1();
+    c2();
+}
+```
+
+This technique is also valid, because RefCell`s `borrow_mut` function calld in the first closure, takes the cell by reference. It retruns a `RefMut` struct, which implements Deref and DerefMut.
+The second closures calls `borrow`, which returns a `Ref` struct. `Ref` implements Deref, Debug, Display.
+
+The advantages of this technique is that the inner value is not required to implement Copy or Default. However, the disadvantage is that RefCell is dynamically checked, and has some runtime overhead.
