@@ -89,7 +89,7 @@ struct NonCopyBool(bool);
 
 fn main() {
     let mut flag = NonCopyBool(false);
-    
+
     let mut c1 = || flag = NonCopyBool(true);
     let c2 = || println!("{:?}", flag);
 
@@ -121,8 +121,9 @@ The flag is borrowed mutably in the first closure, but also borrowed by referenc
 This means there are a mutable, and a non-mutable reference to the same data, which violates the rules.
 
 To get around this, there are a few techniques:
-    - Use [std::cell::Cell](https://doc.rust-lang.org/std/cell/struct.Cell.html).
-    - Use [std::cell::RefCell](https://doc.rust-lang.org/std/cell/struct.RefCell.html).
+
+  - Use [std::cell::Cell](https://doc.rust-lang.org/std/cell/struct.Cell.html).
+  - Use [std::cell::RefCell](https://doc.rust-lang.org/std/cell/struct.RefCell.html).
 
 #### Technique 1: std::cell::Cell
 
@@ -182,7 +183,7 @@ This technique is also valid, because RefCell's [borrow_mut](https://doc.rust-la
 The second closures calls [borrow](https://doc.rust-lang.org/std/cell/struct.RefCell.html#method.borrow), which returns a [Ref](https://doc.rust-lang.org/std/cell/struct.Ref.html) struct.
 
 ##### Advantages
-The advantages of this technique is that the inner value is not required to implement [Copy](https://doc.rust-lang.org/std/marker/trait.Copy.html) or [Default](https://doc.rust-lang.org/std/default/trait.Default.html). 
+The advantages of this technique is that the inner value is not required to implement [Copy](https://doc.rust-lang.org/std/marker/trait.Copy.html) or [Default](https://doc.rust-lang.org/std/default/trait.Default.html).
 
 ##### Disadvantages
 The big disadvantage of RefCell is that obtaining references / mutable references is dynamically checked, and therefore has some runtime overhead.
