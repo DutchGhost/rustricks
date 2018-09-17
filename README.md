@@ -217,3 +217,62 @@ The advantage of this technique is that is does not require any runtime checks, 
 
 ##### Disadvantages
 This technique can not always be used, and is not verry flexible.
+
+### Being generic over [T; N]
+
+It occasionally happens you want to write a function that is generic over array's, and you might write something like:
+
+```Rust
+fn example<T, A>(xs: A)
+where
+    A: AsRef<[T]>
+{
+    // Do something
+}
+
+fn main() {
+    let array = [0; 10];
+
+    example(array);
+}
+```
+
+However, when the array-size is 33 or more, AsRef is not implemented anymore:
+```
+error[E0277]: the trait bound `[{integer}; 33]: std::convert::AsRef<[_]>` is not satisfied
+  --> src/main.rs:11:5
+   |
+11 |     example(array);
+   |     ^^^^^^^ the trait `std::convert::AsRef<[_]>` is not implemented for `[{integer}; 33]`
+```
+
+In stable Rust there is no solution, however in nightly there is.
+
+#### Unsize
+
+```Rust
+#![feature(unsize)]
+
+use std::marker::Unsize;
+
+fn example<T, A>(xs: A)
+where
+    A: Unsize<[T]>
+{
+    // Do something
+}
+
+fn main() {
+    let array = [0; 33];
+
+    example(array);
+}
+```
+
+Now the example function takes anything that can be `Unsized` into a [T]. It happens to be that any array can be unsized into a [T], because any array implements `Unsize<[T]>`. The compiler automatically implements it!
+
+##### Advantages
+The advantage is that with `Unsize<[T]>`, you can pass any array into the function, the size of the array does not matter anymore.
+
+##### Disadvantages
+The disadvantage is that now you can *only* pass in array's. Slices, Boxes, Vec's, e.g can't be passed into the function anymore.
