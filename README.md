@@ -276,3 +276,18 @@ The advantage is that with `Unsize<[T]>`, you can pass any array into the functi
 
 ##### Disadvantages
 The disadvantage is that now you can *only* pass in array's. Slices, Boxes, Vec's, e.g can't be passed into the function anymore.
+
+### References to references.
+
+Somethimes, you want to have a reference to a reference, e.g
+```Rust
+&'a &'b T
+```
+
+This requires `'b: 'a`, NOT `'a: 'b`
+
+It is no different than
+```Rust
+&'a T
+```
+which requires `T: 'a`
