@@ -124,6 +124,7 @@ To get around this, there are a few techniques:
 
   - Use [std::cell::Cell](https://doc.rust-lang.org/std/cell/struct.Cell.html).
   - Use [std::cell::RefCell](https://doc.rust-lang.org/std/cell/struct.RefCell.html).
+  - Use [std::sync::atomic::AtomicBool](https://doc.rust-lang.org/std/sync/atomic/struct.AtomicBool.html).
   - Rewrite and leverage NLL
 
 #### Technique 1: std::cell::Cell
@@ -189,7 +190,37 @@ The advantages of this technique is that the inner value is not required to impl
 ##### Disadvantages
 The big disadvantage of RefCell is that obtaining references / mutable references is dynamically checked, and therefore has some runtime overhead.
 
-#### Technique 3: Rewrite and leverage NLL
+#### Technique 3: std::sync::atomic::AtomicBool
+
+```Rust
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+
+struct NonCopyBool(AtomicBool);
+
+fn main() {
+    let flag = NonCopyBool(AtomicBool::new(false));
+    
+    let c1 = || flag.0.store(true, Ordering::SeqCst);
+    
+    let c2 = || println!("{:?}", flag.0.load(Ordering::SeqCst));
+    
+    c1();
+    c2();
+}
+```
+[playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2015&gist=bf557ca921eb2bcae6aca1781d137053)
+
+##### How does it work?
+This uses Atomic's. In this case, the AtomicBool only needs a shared reference to be able to write and read.
+
+##### Advantages
+Atomic's have the power to, when correctly used, synchronize updates between threads.
+
+##### Disadvantages
+The disadvantage is that Atomic operations are more expensive. When used in a single-threaded environment, it might be more performant to use other technique's
+
+#### Technique 4: Rewrite and leverage NLL
 
 ```Rust
 #![feature(nll)]
